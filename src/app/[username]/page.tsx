@@ -4,10 +4,37 @@ import { ServicesGrid, Service } from "@/components/ServicesGrid";
 import { PaymentMethods, PaymentMethod } from "@/components/PaymentMethods";
 import { FloatingContact } from "@/components/FloatingContact";
 import { notFound } from "next/navigation";
+import { Metadata, ResolvingMetadata } from "next";
 
 // For Next.js 15, params is a Promise
 interface PageProps {
   params: Promise<{ username: string }>;
+}
+
+export async function generateMetadata(
+  { params }: PageProps,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const { username } = await params;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('artist_name, bio')
+    .eq('username', username)
+    .single();
+
+  const title = profile?.artist_name ? `${profile.artist_name} | Perfil Premium` : `@${username} | Perfil Premium`;
+  const description = profile?.bio || "Descubre mi contenido exclusivo y servicios personalizados.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'profile',
+    },
+  };
 }
 
 export default async function ProfilePage({ params }: PageProps) {
