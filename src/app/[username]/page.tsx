@@ -1,0 +1,109 @@
+import { supabase } from "@/lib/supabase";
+import { Hero } from "@/components/Hero";
+import { ServicesGrid, Service } from "@/components/ServicesGrid";
+import { PaymentMethods, PaymentMethod } from "@/components/PaymentMethods";
+import { FloatingContact } from "@/components/FloatingContact";
+import { notFound } from "next/navigation";
+
+// For Next.js 15, params is a Promise
+interface PageProps {
+  params: Promise<{ username: string }>;
+}
+
+export default async function ProfilePage({ params }: PageProps) {
+  const { username } = await params;
+
+  // 1. Fetch Profile
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('username', username)
+    .eq('is_active', true)
+    .single();
+
+  if (profileError || !profile) {
+    notFound();
+  }
+
+  const profileId = profile.id;
+
+  // 2. Fetch Services
+  const { data: servicesData } = await supabase
+    .from('services')
+    .select('*')
+    .eq('profile_id', profileId)
+    .eq('is_active', true);
+
+  const services: Service[] = servicesData || [];
+
+  // 3. Fetch Payment Methods (Fiat & Crypto)
+  const { data: fiatMethods } = await supabase
+    .from('payment_methods')
+    .select('*')
+    .eq('profile_id', profileId);
+
+  const { data: cryptoMethods } = await supabase
+    .from('crypto_wallets')
+    .select('*')
+    .eq('profile_id', profileId);
+
+  // Normalize payments to our UI structure
+  const allPaymentMethods: PaymentMethod[] = [];
+  
+  if (fiatMethods) {
+    fiatMethods.forEach(method => {
+      if (method.type === 'mercadopago' && method.mp_alias) {
+        allPaymentMethods.push({
+          id: method.id,
+          type: 'mercadopago',
+          label: 'Mercado Pago',
+          value: method.mp_alias
+        });
+      }
+      if (method.type === 'paypal' && method.paypal_email) {
+        allPaymentMethods.push({
+          id: method.id,
+          type: 'paypal',
+          label: 'PayPal',
+          value: method.paypal_email
+        });
+      }
+    });
+  }
+
+  if (cryptoMethods) {
+    cryptoMethods.forEach(method => {
+      allPaymentMethods.push({
+        id: method.id,
+        type: 'crypto',
+        label: method.crypto,
+        value: method.wallet_address,
+        network: method.network
+      });
+    });
+  }
+
+  return (
+    <main className="min-h-screen pb-20">
+      <Hero 
+        name={profile.artist_name}
+        bio={profile.bio}
+        avatarUrl={profile.avatar_url}
+        telegramUrl={profile.telegram_username ? `https://t.me/${profile.telegram_username}` : undefined}
+      />
+      
+      <ServicesGrid 
+        services={services}
+        telegramUrl={profile.telegram_username ? `https://t.me/${profile.telegram_username}` : undefined}
+      />
+      
+      {allPaymentMethods.length > 0 && (
+        <PaymentMethods methods={allPaymentMethods} />
+      )}
+
+      {profile.telegram_username && (
+        <FloatingContact telegramUrl={`https://t.me/${profile.telegram_username}`} />
+      )}
+    </main>
+  );
+}
