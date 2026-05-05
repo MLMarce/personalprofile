@@ -19,7 +19,7 @@ export async function generateMetadata(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('artist_name, bio')
+    .select('artist_name, bio, avatar_url')
     .eq('username', username)
     .single();
 
@@ -33,6 +33,7 @@ export async function generateMetadata(
       title,
       description,
       type: 'profile',
+      images: profile?.avatar_url ? [profile.avatar_url] : ["https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"],
     },
   };
 }

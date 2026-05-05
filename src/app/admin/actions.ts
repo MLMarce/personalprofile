@@ -10,8 +10,13 @@ export async function updateProfile(formData: FormData) {
 
   const artistName = formData.get('artist_name') as string
   const bio = formData.get('bio') as string
-  const avatarUrl = formData.get('avatar_url') as string
-  const telegramUsername = formData.get('telegram_username') as string
+  const rawAvatarUrl = formData.get('avatar_url') as string
+  let avatarUrl = rawAvatarUrl?.trim() || null
+  if (avatarUrl && !avatarUrl.startsWith('http')) {
+    avatarUrl = 'https://' + avatarUrl
+  }
+  const rawTelegramUsername = formData.get('telegram_username') as string
+  const telegramUsername = rawTelegramUsername?.trim() || null
 
   const { error } = await supabase
     .from('profiles')
