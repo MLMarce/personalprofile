@@ -20,7 +20,7 @@ export default async function AdminPage() {
   // 2. Obtener servicios
   const { data: services } = await supabase
     .from('services')
-    .select('*')
+    .select('*, service_variants(*)')
     .eq('profile_id', user.id)
     .order('created_at', { ascending: false })
   

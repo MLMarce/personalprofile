@@ -42,22 +42,47 @@ export async function saveService(formData: FormData) {
   const id = formData.get('id') as string
   const title = formData.get('title') as string
   const description = formData.get('description') as string
-  const priceUsd = Number(formData.get('price_usd'))
-  const priceArs = Number(formData.get('price_ars'))
   const isPopular = formData.get('is_popular') === 'on'
+  const variantsRaw = formData.get('variants') as string
+  
+  let variants = []
+  try {
+    if (variantsRaw) variants = JSON.parse(variantsRaw)
+  } catch(e) {}
+
+  let serviceId = id
 
   if (id) {
     const { error } = await supabase
       .from('services')
-      .update({ title, description, price_usd: priceUsd, price_ars: priceArs, is_popular: isPopular })
+      .update({ title, description, is_popular: isPopular })
       .eq('id', id)
       .eq('profile_id', user.id)
     if (error) return { error: error.message }
   } else {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('services')
-      .insert({ profile_id: user.id, title, description, price_usd: priceUsd, price_ars: priceArs, is_popular: isPopular })
+      .insert({ profile_id: user.id, title, description, is_popular: isPopular })
+      .select('id')
+      .single()
     if (error) return { error: error.message }
+    if (data) serviceId = data.id
+  }
+  
+  // Sync variants
+  if (serviceId) {
+    await supabase.from('service_variants').delete().eq('service_id', serviceId)
+    
+    if (variants.length > 0) {
+      const variantsToInsert = variants.map((v: any, idx: number) => ({
+        service_id: serviceId,
+        name: v.name,
+        price_usd: Number(v.price_usd) || null,
+        price_ars: Number(v.price_ars) || null,
+        position: idx
+      }))
+      await supabase.from('service_variants').insert(variantsToInsert)
+    }
   }
   
   revalidatePath('/admin')

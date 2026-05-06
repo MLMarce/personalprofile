@@ -58,7 +58,7 @@ export default async function ProfilePage({ params }: PageProps) {
   // 2. Fetch Services
   const { data: servicesData } = await supabase
     .from('services')
-    .select('*')
+    .select('*, service_variants(*)')
     .eq('profile_id', profileId)
     .eq('is_active', true);
 

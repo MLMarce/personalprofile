@@ -8,6 +8,7 @@ import { Edit2, Plus, Trash2, X, ExternalLink, Copy, Check } from "lucide-react"
 export function AdminDashboard({ profile, services, payments }: any) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<any>(null);
+  const [modalVariants, setModalVariants] = useState<any[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const handleCopyLink = () => {
@@ -16,9 +17,37 @@ export function AdminDashboard({ profile, services, payments }: any) {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const openServiceModal = (service: any = null) => {
+    setEditingService(service);
+    if (service && service.service_variants && service.service_variants.length > 0) {
+      const sorted = [...service.service_variants].sort((a, b) => (a.position || 0) - (b.position || 0));
+      setModalVariants(sorted);
+    } else {
+      setModalVariants([{ id: Date.now().toString(), name: '', price_usd: '', price_ars: '' }]);
+    }
+    setActiveModal('service');
+  };
+
   const closeModal = () => {
     setActiveModal(null);
     setEditingService(null);
+    setModalVariants([]);
+  };
+
+  const addVariant = () => {
+    setModalVariants([...modalVariants, { id: Date.now().toString(), name: '', price_usd: '', price_ars: '' }]);
+  };
+
+  const removeVariant = (index: number) => {
+    const newVariants = [...modalVariants];
+    newVariants.splice(index, 1);
+    setModalVariants(newVariants);
+  };
+
+  const updateVariant = (index: number, field: string, value: string) => {
+    const newVariants = [...modalVariants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setModalVariants(newVariants);
   };
 
   const getPaymentValue = (type: string) => {
@@ -67,21 +96,21 @@ export function AdminDashboard({ profile, services, payments }: any) {
         <div className="glass p-6 rounded-2xl md:col-span-2">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-neon-purple">Servicios</h2>
-            <button onClick={() => setActiveModal('service')} className="px-3 py-1 bg-neon-purple/20 text-neon-purple text-sm rounded-md hover:bg-neon-purple/30 transition-colors flex items-center gap-1">
+            <button onClick={() => openServiceModal()} className="px-3 py-1 bg-neon-purple/20 text-neon-purple text-sm rounded-md hover:bg-neon-purple/30 transition-colors flex items-center gap-1">
               <Plus className="w-4 h-4" /> Nuevo Servicio
             </button>
           </div>
           
           <div className="space-y-3">
-            {services?.length === 0 && <p className="text-gray-500 text-sm">No tienes servicios configurados.</p>}
-            {services?.map((s: any) => (
+            {(!services || services.length === 0) && <p className="text-gray-500 text-sm">No tienes servicios configurados.</p>}
+            {Array.from(new Map(services?.map((s: any) => [s.id, s])).values()).map((s: any) => (
               <div key={s.id} className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5">
                 <div>
                   <h3 className="font-semibold">{s.title} {s.is_popular && <span className="text-xs bg-neon-blue/20 text-neon-blue px-2 py-0.5 rounded ml-2">Popular</span>}</h3>
                   <p className="text-xs text-gray-400">${s.price_usd} USD</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingService(s); setActiveModal('service'); }} className="p-2 bg-white/10 rounded hover:bg-white/20"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={() => openServiceModal(s)} className="p-2 bg-white/10 rounded hover:bg-white/20"><Edit2 className="w-4 h-4" /></button>
                   <button onClick={async () => await deleteService(s.id)} className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -117,8 +146,8 @@ export function AdminDashboard({ profile, services, payments }: any) {
       {/* Modals */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="glass w-full max-w-lg rounded-2xl p-6 relative shadow-2xl animate-in zoom-in-95">
-            <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X className="w-6 h-6" /></button>
+          <div className="glass w-full max-w-lg rounded-2xl p-6 relative shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"><X className="w-6 h-6" /></button>
             
             {activeModal === 'profile' && (
               <form action={async (fd) => { await updateProfile(fd); closeModal(); }}>
@@ -149,6 +178,7 @@ export function AdminDashboard({ profile, services, payments }: any) {
               <form action={async (fd) => { await saveService(fd); closeModal(); }}>
                 <h2 className="text-xl font-bold mb-4">{editingService ? 'Editar Servicio' : 'Nuevo Servicio'}</h2>
                 {editingService && <input type="hidden" name="id" value={editingService.id} />}
+                <input type="hidden" name="variants" value={JSON.stringify(modalVariants)} />
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Título del paquete</label>
@@ -158,17 +188,47 @@ export function AdminDashboard({ profile, services, payments }: any) {
                     <label className="block text-sm text-gray-400 mb-1">Descripción</label>
                     <textarea name="description" defaultValue={editingService?.description} className="w-full bg-white/5 border border-white/10 rounded p-2 outline-none" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-1">Precio USD</label>
-                      <input type="number" step="0.01" name="price_usd" defaultValue={editingService?.price_usd} className="w-full bg-white/5 border border-white/10 rounded p-2 outline-none" required />
+                  
+                  <div className="border-t border-white/10 pt-4 mt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-semibold text-neon-blue">Variantes del Servicio</h3>
+                      <button type="button" onClick={addVariant} className="text-xs bg-neon-blue/20 text-neon-blue px-2 py-1 rounded hover:bg-neon-blue/30 flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Agregar Variante
+                      </button>
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-1">Precio ARS</label>
-                      <input type="number" step="0.01" name="price_ars" defaultValue={editingService?.price_ars} className="w-full bg-white/5 border border-white/10 rounded p-2 outline-none" required />
+                    
+                    {modalVariants.length === 0 && (
+                      <p className="text-xs text-gray-500 mb-3">Agrega al menos una variante (ej: "Básico", "Premium")</p>
+                    )}
+                    
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                      {modalVariants.map((variant, index) => (
+                        <div key={variant.id || index} className="p-3 bg-white/5 border border-white/10 rounded-lg relative">
+                          <button type="button" onClick={() => removeVariant(index)} className="absolute top-2 right-2 text-gray-500 hover:text-red-400">
+                            <X className="w-4 h-4" />
+                          </button>
+                          <div className="space-y-2 pr-6">
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Nombre</label>
+                              <input value={variant.name} onChange={(e) => updateVariant(index, 'name', e.target.value)} placeholder="Ej: Premium" className="w-full bg-black/20 border border-white/5 rounded p-1.5 text-sm outline-none" required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">Precio USD</label>
+                                <input type="number" step="0.01" value={variant.price_usd || ''} onChange={(e) => updateVariant(index, 'price_usd', e.target.value)} className="w-full bg-black/20 border border-white/5 rounded p-1.5 text-sm outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">Precio ARS</label>
+                                <input type="number" step="0.01" value={variant.price_ars || ''} onChange={(e) => updateVariant(index, 'price_ars', e.target.value)} className="w-full bg-black/20 border border-white/5 rounded p-1.5 text-sm outline-none" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
+
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
                     <input type="checkbox" name="is_popular" id="is_popular" defaultChecked={editingService?.is_popular} className="w-4 h-4" />
                     <label htmlFor="is_popular" className="text-sm">Marcar como "Más Popular"</label>
                   </div>
