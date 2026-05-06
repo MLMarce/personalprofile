@@ -143,3 +143,48 @@ export async function savePaymentMethod(formData: FormData) {
   revalidatePath('/[username]', 'page')
   return { success: true }
 }
+
+export async function saveSocialLink(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+
+  const id = formData.get('id') as string
+  const platform = formData.get('platform') as string
+  const url = formData.get('url') as string
+
+  if (id) {
+    const { error } = await supabase
+      .from('social_links')
+      .update({ platform, url })
+      .eq('id', id)
+      .eq('profile_id', user.id)
+    if (error) return { error: error.message }
+  } else {
+    const { error } = await supabase
+      .from('social_links')
+      .insert({ profile_id: user.id, platform, url })
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/admin')
+  revalidatePath('/[username]', 'page')
+  return { success: true }
+}
+
+export async function deleteSocialLink(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
+
+  const { error } = await supabase
+    .from('social_links')
+    .delete()
+    .eq('id', id)
+    .eq('profile_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin')
+  revalidatePath('/[username]', 'page')
+  return { success: true }
+}

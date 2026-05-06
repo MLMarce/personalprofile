@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { updateProfile, saveService, deleteService, savePaymentMethod } from "./actions";
+import { updateProfile, saveService, deleteService, savePaymentMethod, saveSocialLink, deleteSocialLink } from "./actions";
 import { logout } from "../login/actions";
 import { Edit2, Plus, Trash2, X, ExternalLink, Copy, Check } from "lucide-react";
 
-export function AdminDashboard({ profile, services, payments }: any) {
+export function AdminDashboard({ profile, services, payments, socialLinks }: any) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<any>(null);
+  const [editingSocialLink, setEditingSocialLink] = useState<any>(null);
   const [modalVariants, setModalVariants] = useState<any[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -31,6 +32,7 @@ export function AdminDashboard({ profile, services, payments }: any) {
   const closeModal = () => {
     setActiveModal(null);
     setEditingService(null);
+    setEditingSocialLink(null);
     setModalVariants([]);
   };
 
@@ -139,6 +141,31 @@ export function AdminDashboard({ profile, services, payments }: any) {
                <h3 className="font-semibold mb-1">Cripto (USDT)</h3>
                <p className="text-xs text-gray-500 truncate">{getPaymentValue('USDT') || 'No configurado'}</p>
              </div>
+          </div>
+        </div>
+
+        {/* Social Links Card */}
+        <div className="glass p-6 rounded-2xl md:col-span-3">
+          <div className="flex justify-between items-center mb-4">
+             <h2 className="text-xl font-semibold text-white">Redes Sociales</h2>
+             <button onClick={() => setActiveModal('social')} className="px-3 py-1 bg-white/10 text-white text-sm rounded-md hover:bg-white/20 transition-colors flex items-center gap-1">
+                <Plus className="w-4 h-4" /> Agregar Plataforma
+             </button>
+          </div>
+          <div className="space-y-3">
+            {(!socialLinks || socialLinks.length === 0) && <p className="text-gray-500 text-sm">No tienes redes sociales configuradas.</p>}
+            {socialLinks?.map((s: any) => (
+              <div key={s.id} className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5">
+                <div>
+                  <h3 className="font-semibold">{s.platform}</h3>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-neon-blue hover:underline truncate inline-block max-w-[200px] sm:max-w-xs">{s.url}</a>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { setEditingSocialLink(s); setActiveModal('social'); }} className="p-2 bg-white/10 rounded hover:bg-white/20"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={async () => await deleteSocialLink(s.id)} className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -259,6 +286,24 @@ export function AdminDashboard({ profile, services, payments }: any) {
                   </div>
                   <p className="text-xs text-gray-500">Nota: Al guardar reemplazará el valor anterior para el tipo seleccionado.</p>
                   <button type="submit" className="w-full bg-white text-black font-bold py-2 rounded mt-4 hover:bg-gray-200">Guardar Método</button>
+                </div>
+              </form>
+            )}
+
+            {activeModal === 'social' && (
+              <form action={async (fd) => { await saveSocialLink(fd); closeModal(); }}>
+                <h2 className="text-xl font-bold mb-4">{editingSocialLink ? 'Editar Plataforma' : 'Nueva Plataforma'}</h2>
+                {editingSocialLink && <input type="hidden" name="id" value={editingSocialLink.id} />}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Nombre de la plataforma (Ej: X, OnlyFans, TikTok)</label>
+                    <input name="platform" defaultValue={editingSocialLink?.platform} className="w-full bg-white/5 border border-white/10 rounded p-2 outline-none" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">URL</label>
+                    <input type="url" name="url" defaultValue={editingSocialLink?.url} placeholder="https://" className="w-full bg-white/5 border border-white/10 rounded p-2 outline-none" required />
+                  </div>
+                  <button type="submit" className="w-full bg-white text-black font-bold py-2 rounded mt-4 hover:bg-gray-200">Guardar Plataforma</button>
                 </div>
               </form>
             )}

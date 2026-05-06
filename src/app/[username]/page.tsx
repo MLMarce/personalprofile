@@ -111,6 +111,12 @@ export default async function ProfilePage({ params }: PageProps) {
     });
   }
 
+  // 4. Fetch Social Links
+  const { data: socialLinksData } = await supabase
+    .from('social_links')
+    .select('*')
+    .eq('profile_id', profileId);
+
   return (
     <main className="min-h-screen pb-20">
       <Hero 
@@ -118,6 +124,7 @@ export default async function ProfilePage({ params }: PageProps) {
         bio={profile.bio}
         avatarUrl={profile.avatar_url}
         telegramUrl={profile.telegram_username ? `https://t.me/${profile.telegram_username}` : undefined}
+        socialLinks={socialLinksData || []}
       />
       
       <ServicesGrid 

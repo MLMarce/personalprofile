@@ -1,16 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Send } from "lucide-react";
+import { Send, Link as LinkIcon, Camera, MessageCircle, Play, Globe } from "lucide-react";
+
+export interface SocialLink {
+  id: string;
+  platform: string;
+  url: string;
+}
 
 interface HeroProps {
   name: string;
   bio: string;
   avatarUrl: string | null;
   telegramUrl?: string;
+  socialLinks?: SocialLink[];
 }
 
-export function Hero({ name, bio, avatarUrl, telegramUrl }: HeroProps) {
+export function Hero({ name, bio, avatarUrl, telegramUrl, socialLinks }: HeroProps) {
   const defaultAvatar = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
 
   return (
@@ -47,10 +54,41 @@ export function Hero({ name, bio, avatarUrl, telegramUrl }: HeroProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.6 }}
-          className="text-gray-300 mb-8 text-lg"
+          className="text-gray-300 mb-6 text-lg"
         >
           {bio || "Contenido exclusivo y personalizado 🔥"}
         </motion.p>
+
+        {socialLinks && socialLinks.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35, duration: 0.6 }}
+            className="flex flex-wrap justify-center gap-3 mb-8"
+          >
+            {socialLinks.map((link) => {
+              const platformLower = link.platform.toLowerCase();
+              let Icon = LinkIcon;
+              if (platformLower.includes('instagram') || platformLower.includes('ig')) Icon = Camera;
+              if (platformLower.includes('twitter') || platformLower.includes('x')) Icon = MessageCircle;
+              if (platformLower.includes('youtube') || platformLower.includes('yt')) Icon = Play;
+              if (platformLower.includes('facebook') || platformLower.includes('fb')) Icon = Globe;
+              
+              return (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full glass glass-hover text-sm font-medium transition-all text-gray-300 hover:text-white border border-white/5"
+                >
+                  <Icon className="w-4 h-4 text-neon-purple" />
+                  {link.platform}
+                </a>
+              );
+            })}
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
